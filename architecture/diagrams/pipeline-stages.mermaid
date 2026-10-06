@@ -1,0 +1,60 @@
+flowchart TD
+    subgraph STAGE1["Stage 1: Source Control & SCM Governance"]
+        A1[Developer Commit] -->|GPG / SSH Signed| A2[Git Branch Protection]
+        A2 -->|Conventional Commits Lint| A3[Peer Code Review]
+        A3 -->|4-Eyes Principle >=2 Approvals| A4[JIRA CAB Ticket Check]
+    end
+
+    subgraph STAGE2["Stage 2: Hermetic Build & Unit Testing"]
+        A4 --> B1[Multi-Stage Distroless Build]
+        B1 --> B2[Unit Test Suite Execution]
+        B2 -->|Pass: Line Coverage >= 85%| B3[Generate CycloneDX & SPDX SBOM]
+    end
+
+    subgraph STAGE3["Stage 3: SAST (Static Application Security Testing)"]
+        B3 --> C1[SonarQube Quality Gate]
+        B3 --> C2[Semgrep Banking Ruleset]
+        C1 & C2 -->|0 Critical / 0 High / 0 Hardcoded Keys| C3[SAST Attestation Generated]
+    end
+
+    subgraph STAGE4["Stage 4: Dependency, Secret & Container Scanning"]
+        C3 --> D1[Gitleaks Full Tree Secret Scan]
+        C3 --> D2[Trivy & Snyk SCA Vulnerability Scan]
+        D1 & D2 -->|No Unpatched High/Critical CVEs| D3[Container Image Build]
+        D3 --> D4[Cosign KMS Signature & SLSA L3 Attestation]
+        D4 --> D5[Push to Private ECR / Harbor Registry]
+    end
+
+    subgraph STAGE5["Stage 5: Integration & Contract Testing"]
+        D5 --> E1[Pact Consumer-Driven Contract Verification]
+        E1 --> E2[Testcontainers Ephemeral Banking Mocks]
+        E2 -->|API Schema Backward-Compatibility Verified| E3[Integration Attestation]
+    end
+
+    subgraph STAGE6["Stage 6: DAST (Dynamic Application Security Testing)"]
+        E3 --> F1[Spin Ephemeral Preview Staging Env]
+        F1 --> F2[OWASP ZAP Authenticated API Scan]
+        F2 -->|0 High/Critical Injection, BOLA, Auth Flaws| F3[DAST Security Sign-Off]
+    end
+
+    subgraph STAGE7["Stage 7: Policy & Compliance Gates (OPA / Conftest)"]
+        F3 --> G1[RBI Master Direction 2023 Validation]
+        F3 --> G2[PCI-DSS v4.0 Control Verification]
+        F3 --> G3[Segregation of Duties Enforcement Check]
+        G1 & G2 & G3 -->|All Policies PASS| G4[Signed GitOps Release Tag Generated]
+    end
+
+    subgraph STAGE8["Stage 8: Deployment & Automated Verification"]
+        G4 --> H1{Service Workload Type}
+        H1 -->|Payment & API Gateways| H2[Argo Rollouts: Canary Strategy]
+        H1 -->|Core Settlement & Ledger| H3[Argo Rollouts: Blue-Green Strategy]
+        
+        H2 --> I1[5% Traffic -> 20% -> 50% -> 100%]
+        I1 -->|Prometheus SLI: Error Rate < 0.05%, P99 < 150ms| I2[Canary Promoted to Stable]
+        I1 -->|Threshold Breached| I3[Instant Automated Rollback <15s]
+
+        H3 --> J1[Deploy to Green Standby Pods]
+        J1 --> J2[Execute Synthetic Transaction Verification]
+        J2 -->|Pass| J3[Atomic Ingress Router Cutover to Green]
+        J2 -->|Fail| J4[Abort Cutover & Retain Active Blue]
+    end
