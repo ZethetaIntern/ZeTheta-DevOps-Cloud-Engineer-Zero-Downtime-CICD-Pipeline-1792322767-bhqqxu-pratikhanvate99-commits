@@ -1,0 +1,76 @@
+<mxfile host="app.diagrams.net" modified="2026-10-19T13:45:00.000Z" agent="NovaPay Platform Architecture" version="24.0.0">
+  <diagram id="novapay-pipeline" name="NovaPay 8-Stage Canonical CI/CD Pipeline">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Stage 1 -->
+        <mxCell id="stage1" value="Stage 1: SCM Governance&#xa;GPG/SSH Verification&#xa;4-Eyes Review | CAB Ticket" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Stage 2 -->
+        <mxCell id="stage2" value="Stage 2: Hermetic Build&#xa;JaCoCo Coverage &gt;= 85%&#xa;CycloneDX SBOM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="360" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Stage 3 (Parallel) -->
+        <mxCell id="stage3" value="Stage 3: SAST&#xa;SonarQube &amp; Semgrep&#xa;Banking PII &amp; Crypto Rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="260" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Stage 4 (Parallel) -->
+        <mxCell id="stage4" value="Stage 4: SCA &amp; Signing&#xa;Trivy CVEs &amp; Gitleaks&#xa;Cosign KMS &amp; SLSA L3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="460" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Stage 5 -->
+        <mxCell id="stage5" value="Stage 5: Contract &amp; Int&#xa;Pact Contract Tests&#xa;Testcontainers DB Mocks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="360" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Stage 6 -->
+        <mxCell id="stage6" value="Stage 6: DAST&#xa;OWASP ZAP Authenticated&#xa;API Dynamic Security Scan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="360" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Stage 7 -->
+        <mxCell id="stage7" value="Stage 7: Compliance Gates&#xa;OPA Rego &amp; Kyverno&#xa;RBI 2023 | PCI-DSS v4.0 | SoD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="360" width="160" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Stage 8 -->
+        <mxCell id="stage8" value="Stage 8: Zero-Downtime Deploy&#xa;Canary (Istio) &amp; Blue-Green&#xa;Prometheus SLI Auto-Rollback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="360" width="180" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Edges -->
+        <mxCell id="e1" edge="1" parent="1" source="stage1" target="stage2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="stage2" target="stage3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="stage2" target="stage4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="stage3" target="stage5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="stage4" target="stage5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="stage5" target="stage6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="stage6" target="stage7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="stage7" target="stage8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
