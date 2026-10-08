@@ -1,0 +1,33 @@
+flowchart TB
+    subgraph INGRESS["External Ingress Tier (AWS NLB + Istio Ingress Gateway)"]
+        CLIENT[Mobile Banking App / UPI Switch / NetBanking] -->|mTLS 1.3| GW[Istio Ingress Gateway]
+    end
+
+    subgraph CANARY["Topology A: Canary Deployment (Payment Gateway Microservice)"]
+        GW -->|Weighted Traffic Split| VS[Istio VirtualService: payment-service]
+        VS -->|95% Traffic| STABLE[Stable ReplicaSet: v1.4.0]
+        VS -->|5% Traffic| CANARY_PODS[Canary ReplicaSet: v1.5.0]
+        
+        PROM[Prometheus Scraper] -.->|Queries SLIs every 10s| ARGO_CTRL[Argo Rollouts Controller]
+        ARGO_CTRL -->|Evaluates AnalysisRun| ANALYSIS{5xx < 0.05%\nAND\np99 < 150ms?}
+        
+        ANALYSIS -->|YES: Increment Weight| VS
+        ANALYSIS -->|NO: Abort & Rollback| ROLLBACK_TRIGGER[Set Canary Weight to 0%\nAlert PagerDuty & Slack]
+    end
+
+    subgraph BLUEGREEN["Topology B: Blue-Green Deployment (Core Settlement Engine)"]
+        GW -->|Production Traffic 100%| PROD_SVC[Kubernetes Active Service: settlement-prod]
+        PROD_SVC -->|Selector: color=blue| BLUE_PODS[Active Blue ReplicaSet: v2.1.0]
+        
+        PREVIEW_SVC[Kubernetes Preview Service: settlement-preview] -->|Selector: color=green| GREEN_PODS[Standby Green ReplicaSet: v2.2.0]
+        
+        TEST_RUNNER[Synthetic Banking Test Runner] -->|Executes NEFT/RTGS Batch Validation| PREVIEW_SVC
+        TEST_RUNNER -->|Verify Ledger Invariants| DB[(PostgreSQL Aurora Cluster)]
+        
+        CUTOVER_GATE{Synthetic Tests\n100% Pass?}
+        CUTOVER_GATE -->|YES: Atomic Switch| SWITCH_ACTION[Update Service Selector:\ncolor=green]
+        SWITCH_ACTION --> PROD_SVC
+        SWITCH_ACTION -->|scaleDownDelay: 1800s| BLUE_PODS
+        
+        CUTOVER_GATE -->|NO: Abort| ABORT_ACTION[Tear Down Green Pods\nBlue Remains Unaffected]
+    end
