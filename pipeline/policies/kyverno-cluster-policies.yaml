@@ -1,0 +1,45 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: novapay-pod-security-hardening
+  annotations:
+    policies.kyverno.io/title: NovaPay Banking Pod Security Standards
+    policies.kyverno.io/category: RBI Cyber Security & PCI-DSS
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-non-root-and-readonly-rootfs
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - banking-production
+                - banking-staging
+      validate:
+        message: "Banking pods must run as non-root and have readOnlyRootFilesystem set to true."
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+            containers:
+              - securityContext:
+                  readOnlyRootFilesystem: true
+                  allowPrivilegeEscalation: false
+    - name: verify-cosign-image-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - banking-production
+      verifyImages:
+        - imageReferences:
+            - "123456789012.dkr.ecr.ap-south-1.amazonaws.com/novapay/*"
+          attestors:
+            - entries:
+                - kms:
+                    key: "arn:aws:kms:ap-south-1:123456789012:key/novapay-image-signing-key"
