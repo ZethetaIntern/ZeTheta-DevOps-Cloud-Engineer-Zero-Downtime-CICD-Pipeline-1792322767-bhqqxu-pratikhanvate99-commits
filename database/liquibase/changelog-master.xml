@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <property name="lock_timeout" value="2s"/>
+    <property name="statement_timeout" value="30s"/>
+
+    <!-- Phase 1: Expand Phase (Additive, Non-Blocking DDL) -->
+    <include file="changesets/001_expand_phase.sql" relativeToChangelogFile="true"/>
+
+    <!-- Phase 2: Migrate Phase (Batched Asynchronous Backfill) -->
+    <include file="changesets/002_backfill_async.sql" relativeToChangelogFile="true"/>
+
+    <!-- Phase 3: Contract Phase (Safe Deprecation & Cleanup) -->
+    <include file="changesets/003_contract_phase.sql" relativeToChangelogFile="true"/>
+
+</databaseChangeLog>
