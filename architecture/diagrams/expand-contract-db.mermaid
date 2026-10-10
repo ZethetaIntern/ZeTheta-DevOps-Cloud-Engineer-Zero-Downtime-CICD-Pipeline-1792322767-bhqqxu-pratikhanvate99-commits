@@ -1,0 +1,24 @@
+flowchart TD
+    subgraph PHASE1["Phase 1: Expand (Non-Blocking DDL)"]
+        A1[Current Schema: v1\nColumns: id, customer_id, account_num] --> A2[Run Additive DDL with lock_timeout=2s\nADD COLUMN account_num_v2 VARCHAR 34]
+        A2 --> A3[Create Dual-Write DB Trigger\nSync new writes from v1 -> v2]
+        A3 --> A4[Deploy App Release N+1\nWrites to v1 & v2; Reads from v1]
+        A4 -->|Zero Table Lock, Full Backward Compatibility| A5[Phase 1 Complete]
+    end
+
+    subgraph PHASE2["Phase 2: Migrate (Asynchronous Non-Locking Backfill)"]
+        A5 --> B1[Run Batched Async Background Job\nUPDATE accounts SET account_num_v2 = transform account_num]
+        B1 --> B2[Batch Size: 1000 rows with 50ms pause\nZero Lock Escalation]
+        B2 --> B3[Validate Invariants\nSELECT COUNT * WHERE account_num_v2 IS NULL = 0]
+        B3 --> B4[Create Unique Index Concurrently\nCREATE UNIQUE INDEX CONCURRENTLY idx_acc_v2]
+        B4 --> B5[Add NOT NULL Constraint NOT VALID\nThen VALIDATE CONSTRAINT]
+        B5 --> B6[Phase 2 Complete]
+    end
+
+    subgraph PHASE3["Phase 3: Contract (Deprecation & Cleanup)"]
+        B6 --> C1[Deploy App Release N+2\nReads from v2; Writes to v2 only]
+        C1 --> C2[Drop Dual-Write DB Trigger]
+        C2 --> C3[Observe 7-Day Cooling Period\nVerify 0 queries touch legacy column]
+        C3 --> C4[Run Cleanup DDL\nALTER TABLE accounts DROP COLUMN account_num]
+        C4 --> C5[Phase 3 Complete: Clean Schema v2]
+    end
