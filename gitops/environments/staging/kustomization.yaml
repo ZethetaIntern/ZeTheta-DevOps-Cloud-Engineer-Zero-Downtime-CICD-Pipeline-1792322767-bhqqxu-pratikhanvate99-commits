@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: banking-staging
+
+resources:
+  - ../../argo-rollouts/payment-service-canary.yaml
+  - ../../argo-rollouts/settlement-bluegreen.yaml
+  - ../../argo-rollouts/analysis-templates.yaml
+  - ../../istio/virtual-service.yaml
+  - ../../istio/destination-rule.yaml
+
+patches:
+  - target:
+      kind: Rollout
+      name: novapay-payment-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: replace
+        path: /spec/strategy/canary/steps/0/pause/duration
+        value: 1m
