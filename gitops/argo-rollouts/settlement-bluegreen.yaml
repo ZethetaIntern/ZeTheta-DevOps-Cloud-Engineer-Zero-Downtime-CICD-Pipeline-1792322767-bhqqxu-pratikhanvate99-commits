@@ -1,0 +1,110 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: novapay-settlement-service
+  namespace: banking-production
+  labels:
+    app.kubernetes.io/name: novapay-settlement-service
+    app.kubernetes.io/part-of: novapay-banking-platform
+    banking.rbi.gov.in/tier: tier-1-critical
+spec:
+  replicas: 6
+  revisionHistoryLimit: 5
+  strategy:
+    blueGreen:
+      activeService: settlement-service-active
+      previewService: settlement-service-preview
+      autoPromotionEnabled: true
+      scaleDownDelaySeconds: 1800  # Retain previous active replica set warm for 30m
+      prePromotionAnalysis:
+        templates:
+          - templateName: settlement-preview-smoke-test
+        args:
+          - name: preview-service-url
+            value: "http://settlement-service-preview.banking-production.svc.cluster.local:8080"
+  selector:
+    matchLabels:
+      app: novapay-settlement-service
+  template:
+    metadata:
+      labels:
+        app: novapay-settlement-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: settlement-engine
+          image: 123456789012.dkr.ecr.ap-south-1.amazonaws.com/novapay/settlement-service:v3.1.0
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "4000m"
+              memory: "8Gi"
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 5
+            timeoutSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: settlement-service-active
+  namespace: banking-production
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: novapay-settlement-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: settlement-service-preview
+  namespace: banking-production
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: novapay-settlement-service

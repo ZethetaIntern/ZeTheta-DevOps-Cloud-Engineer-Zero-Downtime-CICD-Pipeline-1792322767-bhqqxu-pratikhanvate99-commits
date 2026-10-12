@@ -1,0 +1,60 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: novapay-slos-analysis
+  namespace: banking-production
+spec:
+  metrics:
+    # Metric 1: HTTP 5xx Error Rate (< 0.05% / 0.0005 ratio)
+    - name: success-rate-5xx
+      interval: 30s
+      successCondition: result[0] <= 0.0005
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://prometheus-k8s.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(istio_requests_total{reporter="destination", destination_workload="novapay-payment-service", response_code=~"5.*"}[2m]))
+            /
+            (sum(rate(istio_requests_total{reporter="destination", destination_workload="novapay-payment-service"}[2m])) + 0.00001)
+
+    # Metric 2: P99 Latency (< 150ms / 0.150s)
+    - name: p99-latency
+      interval: 30s
+      successCondition: result[0] <= 0.150
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://prometheus-k8s.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter="destination", destination_workload="novapay-payment-service"}[2m])) by (le)) / 1000
+
+    # Metric 3: Synthetic Banking Transaction Success Rate (>= 99.99%)
+    - name: synthetic-smoke-test
+      interval: 60s
+      successCondition: result[0] >= 0.9999
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://prometheus-k8s.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(novapay_synthetic_transactions_total{status="SUCCESS"}[3m]))
+            /
+            (sum(rate(novapay_synthetic_transactions_total[3m])) + 0.00001)
+
+    # Webhook Notification on Rollback Triggered
+    - name: notify-pagerduty-on-failure
+      provider:
+        web:
+          url: "http://incident-manager.banking-platform.svc.cluster.local/v1/alerts/rollback"
+          headers:
+            - key: Content-Type
+              value: application/json
+          jsonBody: |
+            {
+              "service": "novapay-payment-service",
+              "environment": "production",
+              "action": "AUTOMATED_ROLLBACK_INITIATED",
+              "reason": "SLI breach detected by Prometheus AnalysisRun",
+              "target_rto_seconds": 15
+            }

@@ -1,0 +1,143 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: novapay-payment-service
+  namespace: banking-production
+  labels:
+    app.kubernetes.io/name: novapay-payment-service
+    app.kubernetes.io/part-of: novapay-banking-platform
+    banking.rbi.gov.in/tier: tier-1-critical
+spec:
+  replicas: 10
+  revisionHistoryLimit: 10
+  strategy:
+    canary:
+      canaryService: payment-service-canary
+      stableService: payment-service-stable
+      trafficRouting:
+        istio:
+          virtualService:
+            name: payment-service-virtual-service
+            routes:
+              - primary
+          destinationRule:
+            name: payment-service-destination-rule
+            canarySubsetName: canary
+            stableSubsetName: stable
+      analysis:
+        templates:
+          - templateName: novapay-slos-analysis
+        args:
+          - name: service-name
+            value: novapay-payment-service
+      steps:
+        # Step 1: Route 5% traffic to canary, observe for 10 minutes
+        - setWeight: 5
+        - pause: { duration: 10m }
+        # Step 2: Route 20% traffic to canary, observe for 15 minutes
+        - setWeight: 20
+        - pause: { duration: 15m }
+        # Step 3: Route 50% traffic to canary, observe for 15 minutes
+        - setWeight: 50
+        - pause: { duration: 15m }
+        # Step 4: Promote to 100% stable
+        - setWeight: 100
+  selector:
+    matchLabels:
+      app: novapay-payment-service
+  template:
+    metadata:
+      labels:
+        app: novapay-payment-service
+        security.novapay.bank/scanned: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: novapay-payment-service
+      containers:
+        - name: payment-api
+          image: 123456789012.dkr.ecr.ap-south-1.amazonaws.com/novapay/payment-service:v2.4.0
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                # 15s delay allows Ingress / Envoy endpoint deregistration to propagate
+                # to prevent TCP RST on in-flight UPI/IMPS transactions
+                command: ["/bin/sh", "-c", "sleep 15"]
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "2Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 2
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: tmp-volume
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: novapay-payment-service-pdb
+  namespace: banking-production
+spec:
+  minAvailable: "80%"
+  selector:
+    matchLabels:
+      app: novapay-payment-service

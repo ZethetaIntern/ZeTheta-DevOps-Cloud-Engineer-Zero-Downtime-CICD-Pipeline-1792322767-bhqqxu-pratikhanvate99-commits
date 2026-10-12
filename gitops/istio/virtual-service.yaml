@@ -1,0 +1,29 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: payment-service-virtual-service
+  namespace: banking-production
+spec:
+  hosts:
+    - payment-api.novapay.bank
+    - payment-service-stable.banking-production.svc.cluster.local
+  gateways:
+    - banking-ingress-gateway
+    - mesh
+  http:
+    - name: primary
+      route:
+        - destination:
+            host: payment-service-stable
+            subset: stable
+          weight: 100
+        - destination:
+            host: payment-service-canary
+            subset: canary
+          weight: 0
+      retries:
+        attempts: 3
+        perTryTimeout: 500ms
+        retryOn: "503,gateway-error,connect-failure,refused-stream"
+        retryRemoteLocalities: true
+      timeout: 3s
