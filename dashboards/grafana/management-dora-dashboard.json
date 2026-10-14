@@ -1,0 +1,72 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "DORA Core Delivery Metrics (Elite Benchmark)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prom-prod" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "unit": "dpm" }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
+      "id": 2,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Deployment Frequency (Target: Multiple/day)",
+      "type": "stat",
+      "targets": [{ "expr": "sum(increase(argocd_app_sync_total{phase=\"Succeeded\"}[24h]))", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prom-prod" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "unit": "m" }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 1 },
+      "id": 3,
+      "options": { "reduceOptions": { "calcs": ["mean"] } },
+      "title": "Lead Time for Changes (Target: < 2h)",
+      "type": "stat",
+      "targets": [{ "expr": "avg(pipeline_commit_to_prod_duration_seconds) / 60", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prom-prod" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "unit": "percent" }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 1 },
+      "id": 4,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Change Failure Rate (Target: < 5%)",
+      "type": "stat",
+      "targets": [{ "expr": "(sum(increase(argo_rollouts_aborted_total[30d])) / sum(increase(argocd_app_sync_total[30d]))) * 100", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prom-prod" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "unit": "m" }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 1 },
+      "id": 5,
+      "options": { "reduceOptions": { "calcs": ["mean"] } },
+      "title": "Mean Time to Recovery (Target: < 15m)",
+      "type": "stat",
+      "targets": [{ "expr": "avg(incident_duration_seconds{severity=\"SEV-1\"}) / 60", "refId": "A" }]
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["dora", "management", "executive", "velocity"],
+  "time": { "from": "now-30d", "to": "now" },
+  "title": "NovaPay - Management DORA Velocity Dashboard",
+  "uid": "novapay-dora-mgmt"
+}
