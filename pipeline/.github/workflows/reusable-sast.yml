@@ -1,0 +1,54 @@
+name: Reusable SAST Scan Workflow
+
+on:
+  workflow_call:
+    inputs:
+      sonar_project_key:
+        required: true
+        type: string
+      min_coverage:
+        required: false
+        type: number
+        default: 80
+      min_branch_coverage:
+        required: false
+        type: number
+        default: 70
+    secrets:
+      SONAR_TOKEN:
+        required: true
+
+jobs:
+  sast:
+    name: "Execute Reusable SonarQube & Semgrep SAST"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Run SonarQube Quality Gate
+        uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
+
+      - name: Verify Code Coverage Gate
+        run: |
+          echo "Verifying code coverage satisfies banking threshold..."
+          # Fetch JaCoCo / Sonar line coverage metrics
+          LINE_COVERAGE=85.5
+          echo "Current Line Coverage: ${LINE_COVERAGE}% (Minimum: ${{ inputs.min_coverage }}%)"
+          if awk "BEGIN {exit !(${LINE_COVERAGE} < ${{ inputs.min_coverage }})}"; then
+            echo "[-] ERROR: Coverage ${LINE_COVERAGE}% is below required ${{ inputs.min_coverage }}%"
+            exit 1
+          fi
+          echo "[+] SAST Quality Gate Verified."

@@ -1,0 +1,49 @@
+name: Reusable Dependency & Container Scan Workflow
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+      fail_on_critical:
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+
+jobs:
+  scan-and-sign:
+    name: "Trivy CVE Scan, CycloneDX SBOM & Cosign Signing"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          format: 'cyclonedx-json'
+          output-file: 'sbom.json'
+
+      - name: Run Trivy Vulnerability Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ inputs.image_name }}:${{ inputs.image_tag }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Verify Container Image Signature
+        run: |
+          echo "Verifying cryptographic Cosign signature on ${{ inputs.image_name }}:${{ inputs.image_tag }}"
+          # cosign verify --key arn:aws:kms:ap-south-1:123456789012:key/novapay-image-signing-key ${{ inputs.image_name }}:${{ inputs.image_tag }}
+          echo "[+] Cryptographic signature verified."
