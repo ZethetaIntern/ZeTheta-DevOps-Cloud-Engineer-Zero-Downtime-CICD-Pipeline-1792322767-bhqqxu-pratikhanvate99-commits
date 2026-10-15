@@ -1,0 +1,9 @@
+apiVersion: v2
+name: novapay-microservice
+description: Standardized banking microservice Helm chart for NovaPay Digital Bank
+type: application
+version: 1.0.0
+appVersion: "2.4.0"
+maintainers:
+  - name: NovaPay Platform Engineering
+    email: platform-eng@novapay.bank

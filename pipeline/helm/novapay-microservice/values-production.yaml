@@ -1,0 +1,18 @@
+# Production Environment Overrides - Banking Tier 1
+replicaCount: 10
+resources:
+  requests:
+    cpu: "1000m"
+    memory: "2Gi"
+  limits:
+    cpu: "2000m"
+    memory: "4Gi"
+autoscaling:
+  enabled: true
+  minReplicas: 10
+  maxReplicas: 50
+  targetCPUUtilizationPercentage: 70
+podDisruptionBudget:
+  minAvailable: "80%"
+topologySpreadConstraints:
+  enabled: true

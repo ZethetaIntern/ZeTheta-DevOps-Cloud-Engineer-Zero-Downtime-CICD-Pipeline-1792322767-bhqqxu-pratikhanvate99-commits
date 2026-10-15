@@ -1,0 +1,49 @@
+# Base Helm Configuration - NovaPay Banking Platform
+replicaCount: 3
+
+image:
+  repository: 123456789012.dkr.ecr.ap-south-1.amazonaws.com/novapay/payment-service
+  pullPolicy: IfNotPresent
+  tag: "v2.4.0"
+
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 9090
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
+
+probes:
+  liveness:
+    path: /actuator/health/liveness
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  readiness:
+    path: /actuator/health/readiness
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 15
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  minAvailable: "80%"
