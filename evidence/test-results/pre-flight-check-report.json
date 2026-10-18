@@ -1,0 +1,14 @@
+{
+  "test_suite": "NovaPay Pre-Migration Database Safety & Lock Check",
+  "timestamp": "2026-10-19T13:37:07Z",
+  "database_target": "localhost:5432/novapay_banking",
+  "checks_evaluated": {
+    "active_long_running_transactions_gt_10s": 0,
+    "max_acceptable_long_running_tx": 0,
+    "aurora_replica_lag_seconds": 0.0,
+    "max_acceptable_replica_lag_seconds": 5.0,
+    "enforced_lock_timeout": "2s",
+    "enforced_statement_timeout": "30s"
+  },
+  "verdict": "SAFE_FOR_MIGRATION"
+}

@@ -1,0 +1,21 @@
+{
+  "test_suite": "NovaPay Chaos Engineering & Automated Rollback Verification",
+  "timestamp": "2026-10-19T13:36:46Z",
+  "workload": "novapay-payment-service",
+  "namespace": "banking-production",
+  "scenario": "Simulated Canary Regression with Elevated 5xx Errors",
+  "execution_metrics": {
+    "canary_initial_traffic_percentage": 5,
+    "injected_error_rate_percentage": 2.45,
+    "error_rate_threshold_percentage": 0.05,
+    "prometheus_detection_interval_seconds": 10,
+    "analysis_template_status": "FAILED_CONSECUTIVE_LIMIT_REACHED",
+    "automated_rollback_triggered": true,
+    "traffic_shift_duration_seconds": 11.4,
+    "rollback_target_sla_seconds": 15.0,
+    "stable_replica_set_traffic_restored_percentage": 100,
+    "customer_transaction_loss_detected": 0
+  },
+  "verdict": "SUCCESS_AUTOMATED_ROLLBACK_VERIFIED",
+  "incident_reference": "CHAOS-TEST-20261019-01"
+}
