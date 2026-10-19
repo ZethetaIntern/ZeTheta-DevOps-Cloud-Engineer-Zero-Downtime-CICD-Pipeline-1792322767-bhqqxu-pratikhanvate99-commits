@@ -96,7 +96,7 @@ jobs:
           echo "[+] Quality Gate: Unit test coverage passed."
 
       - name: Generate Software Bill of Materials (SBOM)
-        uses: anchore/sbom-action@v0.17.2
+        uses: anchore/sbom-action@v0.17.9
         with:
           format: 'cyclonedx-json'
           output-file: 'sbom-cyclonedx.json'
@@ -160,7 +160,7 @@ jobs:
           echo "[+] Gitleaks secret scan complete. No secrets found in working tree."
 
       - name: Run Trivy Vulnerability Scanner (SCA)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           scan-type: 'fs'
           severity: 'CRITICAL,HIGH'
