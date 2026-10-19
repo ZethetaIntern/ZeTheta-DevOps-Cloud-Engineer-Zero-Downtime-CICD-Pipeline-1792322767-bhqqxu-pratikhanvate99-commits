@@ -192,24 +192,44 @@ jobs:
             --log-level warn --exit-code 0 || true
           echo "[+] Gitleaks scan complete. No credentials found in source tree."
 
+      
       - name: Run Trivy SCA (Filesystem Scan)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln'
+          vuln-type: 'library'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '0'
+          format: 'table'
+          output: 'trivy-sca-report.txt'
+
+      - name: Display Trivy SCA Report
+        if: always()
         run: |
           echo "========================================================"
-          echo "  Trivy v0.52 - SCA Vulnerability Scan"
+          echo "  Trivy SCA Vulnerability Scan Report"
           echo "========================================================"
-          echo "Downloading Trivy..."
-          curl -sSfL \
-            "https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz" \
-            -o /tmp/trivy.tar.gz
-          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
-          echo "Running Trivy filesystem scan..."
-          trivy fs . \
-            --severity CRITICAL,HIGH \
-            --ignore-unfixed \
-            --exit-code 0 \
-            --format table \
-            --quiet || true
-          echo "[+] Trivy SCA scan complete."
+
+          if [ -f trivy-sca-report.txt ]; then
+            cat trivy-sca-report.txt
+          else
+            echo "Trivy report was not generated."
+          fi
+
+          echo "[+] Trivy SCA scan step completed."
+
+      - name: Upload Trivy SCA Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sca-report
+          path: trivy-sca-report.txt
+          if-no-files-found: warn
+          retention-days: 7
+
 
       - name: Build Container Image (Simulated)
         run: |
